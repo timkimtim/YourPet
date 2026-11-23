@@ -1,0 +1,20 @@
+name: Windows tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.1.0
+        with:
+          go-version-file: go.mod
+          cache: false
+      - run: go test -v ./...
+      - run: go build -trimpath -ldflags "-s -w -H=windowsgui" -o YourPet.exe ./cmd/yourpet
