@@ -1,0 +1,66 @@
+name: Publish Windows release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v7.1.0
+        with:
+          go-version: '1.26.x'
+          cache: false
+      - name: Check the release version
+        shell: pwsh
+        run: |
+          $version = (Get-Content -Raw VERSION).Trim()
+          if ($version -notmatch '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$' -or $env:GITHUB_REF_NAME -ne "v$version") {
+            throw "Release tag must match the version in VERSION"
+          }
+          "APP_VERSION=$version" >> $env:GITHUB_ENV
+      - name: Run Windows tests
+        run: go test -v ./...
+      - name: Build and package
+        shell: pwsh
+        run: |
+          go install github.com/tc-hib/go-winres@v0.3.3
+          if ($LASTEXITCODE -ne 0) { throw 'Could not install go-winres' }
+          $winres = Join-Path (go env GOPATH) 'bin/go-winres.exe'
+          & $winres make --in cmd/yourpet/winres/winres.json --out cmd/yourpet/rsrc --arch amd64,arm64 --file-version $env:APP_VERSION --product-version $env:APP_VERSION
+          if ($LASTEXITCODE -ne 0) { throw 'Could not create Windows resources' }
+
+          New-Item -ItemType Directory -Path dist,build | Out-Null
+          $env:GOOS = 'windows'
+          $env:CGO_ENABLED = '0'
+          foreach ($target in @(@{Arch='amd64'; Label='x64'}, @{Arch='arm64'; Label='ARM64'})) {
+            $env:GOARCH = $target.Arch
+            go build -trimpath -ldflags '-s -w -H=windowsgui' -o build/YourPet.exe ./cmd/yourpet
+            if ($LASTEXITCODE -ne 0) { throw "Could not build $($target.Label)" }
+            $zip = "dist/YourPet-v$($env:APP_VERSION)-Windows-$($target.Label).zip"
+            Compress-Archive -LiteralPath build/YourPet.exe,README.md -DestinationPath $zip
+          }
+          Copy-Item cmd/yourpet/default.pet dist/Persik.pet
+          Get-ChildItem dist -File | Sort-Object Name | ForEach-Object {
+            "$((Get-FileHash -Algorithm SHA256 $_.FullName).Hash.ToLowerInvariant())  $($_.Name)"
+          } | Set-Content -Encoding ascii dist/SHA256SUMS.txt
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $version = [regex]::Escape($env:APP_VERSION)
+          $entry = [regex]::Match((Get-Content -Raw CHANGELOG.md), "(?ms)^## $version\r?\n(.*?)(?=^## |\z)")
+          if (-not $entry.Success) { throw 'Add a matching release entry to CHANGELOG.md' }
+          $guide = '[Installation and pet creation guide](https://github.com/timkimtim/YourPet#readme)'
+          ($entry.Groups[1].Value.Trim() + "`n`n" + $guide) | Set-Content -Encoding utf8 build/release-notes.md
+          $files = @(Get-ChildItem dist -File | ForEach-Object FullName)
+          gh release create $env:GITHUB_REF_NAME @files --verify-tag --title "YourPet $env:GITHUB_REF_NAME" --notes-file build/release-notes.md
+          if ($LASTEXITCODE -ne 0) { throw 'Could not publish the release' }

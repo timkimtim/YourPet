@@ -27,6 +27,7 @@ const (
 	commandStartup
 	commandVisibility
 	commandReposition
+	commandAbout
 	commandQuit
 	commandSize      = 30
 	commandRadius    = 40

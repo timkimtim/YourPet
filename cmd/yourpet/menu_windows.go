@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"time"
 	"unsafe"
+
+	yourpet "github.com/timkimtim/YourPet"
 )
 
 const (
@@ -94,6 +96,7 @@ func (a *app) openMenu() {
 	}
 	menuItem(menu, commandVisibility, visibility, false, a.trayAdded)
 	menuItem(menu, commandReposition, tr("Move to screen corner", "Вернуть в угол экрана"), false, true)
+	menuItem(menu, commandAbout, tr("About YourPet", "О YourPet"), false, true)
 	menuItem(menu, commandQuit, tr("Exit", "Выход"), false, true)
 	a.menuOpen = true
 	setForegroundWindow.Call(a.window)
@@ -159,6 +162,9 @@ func (a *app) perform(command int) {
 			a.placeInCorner(workArea(pos))
 			a.saveSettings()
 			a.setVisible(true)
+		case commandAbout:
+			showMessage(a.window, "YourPet v"+yourpet.Version()+"\n\n"+
+				tr("Current pet: ", "Текущий питомец: ")+a.player.Pet.Name, 0x40)
 		case commandQuit:
 			destroyWindow.Call(a.window)
 			return
