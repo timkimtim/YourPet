@@ -1,12 +1,12 @@
 # YourPet
 
-YourPet is a small, animated desktop companion for Windows 11. It runs locally as a portable app. The included pet, Moss, has three idle poses, walks on its own, jumps, and turns its head toward the cursor.
+YourPet is a small, animated desktop companion for Windows 11. It runs locally as a portable app. The included pet, Ryzhik, has three idle poses, walks on its own, jumps, and turns its head toward the cursor.
 
 ## Install on Windows 11
 
-1. Download the ZIP from [GitHub Releases](../../releases/latest). Choose **x64** for an Intel or AMD PC. Choose **ARM64** for a Windows on Arm PC. Windows shows the system type under **Settings → System → About**.
+1. Download the ZIP from [GitHub Releases](https://github.com/timkimtim/YourPet/releases/latest). Choose **x64** for an Intel or AMD PC. Choose **ARM64** for a Windows on Arm PC. Windows shows the system type under **Settings → System → About**.
 2. Extract the ZIP into a folder you intend to keep, such as `Documents\YourPet`.
-3. Double-click `YourPet.exe`. Moss appears near a corner of the screen, and the YourPet icon appears in the notification area next to the clock. Check the overflow arrow if the icon is hidden.
+3. Double-click `YourPet.exe`. Ryzhik appears near a corner of the screen, and the YourPet icon appears in the notification area next to the clock. Check the overflow arrow if the icon is hidden.
 
 YourPet runs without an installer, an account, or administrator permissions. Release binaries are unsigned. Windows may show a publisher prompt for the downloaded executable.
 
@@ -28,9 +28,9 @@ The app saves preferences and a copy of the imported package in `%APPDATA%\YourP
 1. Get a `.pet` package or make one using the guide below.
 2. Right-click the pet or the tray icon and choose **Load pet…**.
 3. Select the `.pet` or `.zip` file. The new pet appears and remains selected the next time you launch YourPet.
-4. Choose **Restore default pet** to go back to Moss.
+4. Choose **Restore default pet** to go back to Ryzhik.
 
-Try the editable [Moss example package](cmd/yourpet/sample.pet). Open it as a ZIP to see how its animation manifest maps to the sprite sheet.
+Try the editable [Ryzhik example package](cmd/yourpet/default.pet). Open it as a ZIP to see how its animation manifest maps to the sprite sheet.
 
 ## Create a pet package
 
@@ -136,7 +136,7 @@ go test ./...
 go build -trimpath -ldflags "-s -w -H=windowsgui" -o YourPet.exe ./cmd/yourpet
 ```
 
-The default build embeds Moss. To bundle a different default pet, save its package as `cmd/yourpet/default.pet` and build with `-tags bundled`. The app can still import other packages at runtime.
+The default build embeds Ryzhik from `cmd/yourpet/default.pet`. To ship a build with your own starting pet, replace that file with your package, then run the build command again. The app can still import other packages at runtime.
 
 The Windows icon source and resource configuration are in `cmd/yourpet/winres`. If you change them, regenerate the resource objects from the repository root.
 

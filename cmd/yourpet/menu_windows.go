@@ -58,7 +58,7 @@ func (a *app) openMenu() {
 	menuItem(menu, 0, pet.Name, false, false)
 	appendMenu.Call(menu, menuSeparator, 0, 0)
 	menuItem(menu, commandLoad, tr("Load pet…", "Загрузить питомца…"), false, true)
-	if a.imported && len(bundledPet) > 0 {
+	if a.imported {
 		menuItem(menu, commandDefault, tr("Restore default pet", "Вернуть питомца по умолчанию"), false, true)
 	}
 	menuItem(menu, commandNextIdle, tr("Change idle pose", "Сменить позу"), false, len(pet.Idle) > 1)

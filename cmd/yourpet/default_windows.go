@@ -1,5 +1,3 @@
-//go:build bundled
-
 package main
 
 import _ "embed"

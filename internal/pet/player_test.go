@@ -10,7 +10,7 @@ func fixture(t *testing.T) *Package {
 	t.Helper()
 	name := os.Getenv("YOURPET_TEST_PACKAGE")
 	if name == "" {
-		name = "../../cmd/yourpet/sample.pet"
+		name = "../../cmd/yourpet/default.pet"
 	}
 	pkg, _, err := ReadFile(name)
 	if err != nil {
@@ -22,7 +22,7 @@ func fixture(t *testing.T) *Package {
 func TestBundledPackage(t *testing.T) {
 	pkg := fixture(t)
 	if len(pkg.Idle) != 3 || pkg.Look == nil ||
-		len(pkg.Look.Directions) < 8 || pkg.Walk == nil || pkg.Jump == "" {
+		len(pkg.Look.Directions) != 16 || pkg.Walk == nil || pkg.Jump == "" {
 		t.Fatal("built-in package has missing features")
 	}
 }

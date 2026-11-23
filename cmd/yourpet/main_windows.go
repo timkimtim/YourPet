@@ -121,14 +121,7 @@ func run() error {
 	if !a.trayAdded {
 		a.settings.ClickThrough = false
 	}
-	if pkg == nil {
-		if !a.importPackage() {
-			destroyWindow.Call(a.window)
-			return nil
-		}
-	} else {
-		a.setPet(pkg)
-	}
+	a.setPet(pkg)
 	a.refreshStyle()
 	a.setVisible(true)
 	timer, _, err := setTimer.Call(a.window, 1, 32, 0)
@@ -304,9 +297,6 @@ func (a *app) packagePath() string {
 }
 
 func (a *app) defaultPackage() (*pet.Package, error) {
-	if len(bundledPet) == 0 {
-		return nil, nil
-	}
 	return pet.Decode(bundledPet)
 }
 
@@ -337,10 +327,8 @@ func (a *app) importPackage() bool {
 
 func (a *app) restoreDefault() {
 	pkg, err := a.defaultPackage()
-	if err != nil || pkg == nil {
-		if err != nil {
-			a.error(tr("Default pet", "Питомец по умолчанию"), err)
-		}
+	if err != nil {
+		a.error(tr("Default pet", "Питомец по умолчанию"), err)
 		return
 	}
 	if err = os.Remove(a.packagePath()); err != nil && !errors.Is(err, os.ErrNotExist) {
