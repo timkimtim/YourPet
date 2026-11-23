@@ -44,7 +44,7 @@ jobs:
             $env:GOARCH = $target.Arch
             go build -trimpath -ldflags '-s -w -H=windowsgui' -o build/YourPet.exe ./cmd/yourpet
             if ($LASTEXITCODE -ne 0) { throw "Could not build $($target.Label)" }
-            $zip = "dist/YourPet-v$($env:APP_VERSION)-Windows-$($target.Label).zip"
+            $zip = "dist/YourPet-Windows-$($target.Label).zip"
             Compress-Archive -LiteralPath build/YourPet.exe,README.md -DestinationPath $zip
           }
           Copy-Item cmd/yourpet/default.pet dist/Persik.pet

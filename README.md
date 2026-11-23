@@ -2,9 +2,11 @@
 
 YourPet is a small, animated desktop companion for Windows 11. It runs locally as a portable app. The included pet, Persik, has three idle poses, walks on its own, jumps, and turns its head toward the cursor.
 
+[Download for Windows x64](https://github.com/timkimtim/YourPet/releases/latest/download/YourPet-Windows-x64.zip) · [Download for Windows ARM64](https://github.com/timkimtim/YourPet/releases/latest/download/YourPet-Windows-ARM64.zip) · [All releases](https://github.com/timkimtim/YourPet/releases)
+
 ## Install on Windows 11
 
-1. Download the ZIP from [GitHub Releases](https://github.com/timkimtim/YourPet/releases/latest). Choose **x64** for an Intel or AMD PC. Choose **ARM64** for a Windows on Arm PC. Windows shows the system type under **Settings → System → About**.
+1. Choose **x64** for an Intel or AMD PC. Choose **ARM64** for a Windows on Arm PC. Windows shows the system type under **Settings → System → About**.
 2. Extract the ZIP into a folder you intend to keep, such as `Documents\YourPet`.
 3. Double-click `YourPet.exe`. Persik appears near a corner of the screen, and the YourPet icon appears in the notification area next to the clock. Check the overflow arrow if the icon is hidden.
 
@@ -156,5 +158,7 @@ go-winres make --in cmd/yourpet/winres/winres.json --out cmd/yourpet/rsrc --arch
 The app uses semantic versions. The current version is in [VERSION](VERSION), in the **About YourPet** menu, and in the executable properties. The `version` field inside a `.pet` file tracks the package format independently.
 
 For a release, update `VERSION` and [CHANGELOG.md](CHANGELOG.md), commit the changes, and push a matching `v` tag to GitHub. For example, use `v0.2.0` when `VERSION` contains `0.2.0`. GitHub Actions verifies the tag, runs the Windows tests, and publishes ZIPs for x64 and ARM64 with SHA-256 checksums. Use a patch version for a compatible fix, a minor version for a compatible feature, or a major version for a breaking change.
+
+The two Windows ZIPs keep the same filenames across releases so the download links always point to the current build.
 
 To upgrade a portable installation, quit YourPet and replace `YourPet.exe` in the existing folder. Your imported package and preferences are stored in your Windows profile.

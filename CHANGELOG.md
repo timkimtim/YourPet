@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1
+
+- Match Persik's cloudy left eye to the original drawing across the animation frames and app icon.
+- Add permanent download links for the latest Windows x64 and ARM64 builds.
+
 ## 0.2.0
 
 - Persik jumps away into a vertical portal when entering fullscreen and jumps out toward the viewer when returning.
