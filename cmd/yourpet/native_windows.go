@@ -320,12 +320,21 @@ func sampleAxis(target, source int) []sample {
 	return result
 }
 
-func (s *surface) draw(atlas image.Image, crop image.Rectangle) {
+func (s *surface) draw(atlas image.Image, crop, fadeFrom image.Rectangle, fadeAlpha uint8) {
 	width, height := crop.Dx(), crop.Dy()
 	premul := make([][4]uint32, width*height)
+	fromWeight := uint32(fadeAlpha)
+	toWeight := 255 - fromWeight
 	for y := 0; y < height; y++ {
 		for x := 0; x < width; x++ {
 			r, g, b, a := atlas.At(crop.Min.X+x, crop.Min.Y+y).RGBA()
+			if fadeAlpha != 0 {
+				fr, fg, fb, fa := atlas.At(fadeFrom.Min.X+x, fadeFrom.Min.Y+y).RGBA()
+				r = (r*toWeight + fr*fromWeight + 127) / 255
+				g = (g*toWeight + fg*fromWeight + 127) / 255
+				b = (b*toWeight + fb*fromWeight + 127) / 255
+				a = (a*toWeight + fa*fromWeight + 127) / 255
+			}
 			premul[y*width+x] = [4]uint32{b >> 8, g >> 8, r >> 8, a >> 8}
 		}
 	}

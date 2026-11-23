@@ -27,7 +27,7 @@ func TestNativeOverlay(t *testing.T) {
 	a.setPet(pkg)
 	cell := pkg.Clips[pkg.Idle[0].Animation].Frames[0].Cell
 	w, h := a.size()
-	if err = a.paint(cell, w, h); err != nil {
+	if err = a.paint(pet.Pose{Cell: cell}, w, h); err != nil {
 		t.Fatalf("present the first translucent frame: %v", err)
 	}
 	a.settings.ClickThrough = true
@@ -51,6 +51,21 @@ func TestNativeOverlay(t *testing.T) {
 	if !a.windowShown {
 		t.Fatal("overlay did not appear")
 	}
+	windowProc(a.window, wmLButtonDown, 0, 0)
+	windowProc(a.window, wmLButtonUp, 0, 0)
+	if a.lastCell != pkg.Clips[pkg.Jump].Frames[0].Cell {
+		t.Fatal("one left click did not start the jump")
+	}
+	a.setPet(pkg)
+	a.configDir = t.TempDir()
+	windowProc(a.window, wmLButtonDown, 0, 0)
+	a.dragging = true
+	windowProc(a.window, wmLButtonUp, 0, 0)
+	a.tick()
+	if a.lastCell == pkg.Clips[pkg.Jump].Frames[0].Cell {
+		t.Fatal("releasing a drag also started the jump")
+	}
+	a.fullscreenCheckAt = time.Now().Add(time.Minute)
 	a.dragDown = true
 	a.fullscreen = true
 	if a.handleFullscreen(time.Now(), w, h) || !a.windowShown {

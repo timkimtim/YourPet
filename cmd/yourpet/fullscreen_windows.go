@@ -53,7 +53,7 @@ func (a *app) handleFullscreen(now time.Time, width, height int) bool {
 		return true
 	}
 	if display.Animating {
-		a.showFrame(display.Cell, width, height)
+		a.showPose(pet.Pose{Cell: display.Cell}, width, height)
 		return true
 	}
 	return false

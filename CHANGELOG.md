@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.3
+
+- Give Persik animated posture changes between sleeping, sitting, and standing. Approaching with the cursor wakes him and leaving lets him settle into his previous rest.
+- Jump with a single left click and keep dragging as a separate gesture.
+- Crossfade animation changes for pets without dedicated posture clips.
+
 ## 0.2.2
 
 - Track fullscreen windows on the pet's own monitor, including when focus moves to another screen.

@@ -14,14 +14,14 @@ YourPet runs without an installer, an account, or administrator permissions. Rel
 
 ## Controls
 
-- **Drag the pet** with the left mouse button to change its position. **Double-click** to play its jump animation.
+- **Left-click** the pet to jump. **Drag** with the left mouse button to change its position.
 - **Right-click** the pet or the tray icon for its menu. Use **Animations** to preview individual clips, or **Change idle pose** to switch between the available resting poses.
 - **Auto-walk** lets the pet stroll around the current monitor during quiet moments.
-- **Gaze radius** sets how close the cursor needs to be before the pet turns its head. Move the cursor around the pet to see the direction frames.
+- **Gaze radius** sets how close the cursor needs to be before the pet becomes attentive. Persik wakes up and looks around as you move the cursor, then settles back into the same resting pose shortly after you move away.
 - **Size** scales the artwork. **Always on top** controls whether the pet stays above ordinary windows.
 - **Hide in fullscreen** is enabled by default. The pet hides while a fullscreen window is in front on the pet's monitor. Working on a different screen keeps the pet hidden if the fullscreen window is still showing on its own screen. You can drag the pet to another monitor, where it follows that screen's windows. An ordinary maximized window leaves it visible.
 - **Animate fullscreen transitions** is enabled by default for pets with transition clips. With **Always on top** enabled, Persik turns his back and jumps into a portal behind him. When fullscreen ends, he jumps out toward you. If Windows reports an exclusive fullscreen Direct3D game, YourPet hides immediately and plays the return once you're back. Turn off this setting for an immediate hide and return.
-- **Click-through** sends mouse clicks to the window underneath. Use the tray icon to turn the mode off when you want to drag or double-click the pet.
+- **Click-through** sends mouse clicks to the window underneath. Use the tray icon to turn the mode off when you want to drag or click the pet to jump.
 - **Start with Windows** launches YourPet when you sign in. Enable it after moving the executable to its permanent folder.
 - Use **Hide pet**, **Show pet**, **Move to screen corner**, or **Exit** from the tray menu.
 
@@ -100,7 +100,7 @@ Save it as UTF-8. This minimal runnable example uses a sitting idle in the first
 | `frames[].ms` | How long to show a frame, from 40 to 30,000 milliseconds. |
 | `idle` | One to 12 distinct clip IDs. The first entry is the starting idle. After a random stay between `minMs` and `maxMs`, YourPet selects another available idle. A stay can be 500 to 300,000 milliseconds. |
 | `walk` | Optional object with `left` and `right` set to two different clip IDs. This enables auto-walk and directional animation during dragging. |
-| `jump` | Optional ID of the clip to play on double-click. |
+| `jump` | Optional ID of the clip to play on a left click. |
 | `look` | Optional head-turn settings. `neutral` names an idle clip. `anchor` holds the x and y coordinates of the gaze origin inside a cell. `directions` holds cells in clockwise order, from straight up. |
 
 For example, once your sheet has four direction poses in row 2 and you have defined clips named `walk-left`, `walk-right`, and `jump`, add these top-level fields.
@@ -126,11 +126,13 @@ The four directions above are up, right, down, and left. An eight-direction sequ
 
 For fullscreen transitions, add clips with the reserved IDs `fullscreen-hide` and `fullscreen-show` to `animations`. Each clip plays once with a one-second limit. Use transparent cells and keep the last return frame aligned with the idle pose. A pet can supply either clip or both. When a clip is absent, the corresponding hide or return happens immediately.
 
+For changes in posture, add optional clips with IDs in the form `transition:<from>:<to>`, where `<from>` and `<to>` are idle animation IDs. For example, `transition:sleep:sit` wakes Persik before he follows the cursor or jumps. YourPet plays a clip backward when only the opposite direction is supplied. Use matching idle frames at each endpoint. Existing pet packages without posture clips use a brief crossfade.
+
 ### 3. ZIP, load, and test
 
 1. In Explorer, select `pet.json` and `spritesheet.png` together and compress them into a ZIP. Put the files at the root of the archive.
 2. Keep the archive under 24 MB. You can leave the extension as `.zip` or rename it to `.pet`.
-3. Import it via **Load pet…**. Test each clip using **Animations**, then try the gaze radius, double-click, and auto-walk.
+3. Import it via **Load pet…**. Test each clip using **Animations**, then try the gaze radius, click to jump, and auto-walk.
 4. To revise the pet, edit the source files, make a new ZIP, and load the new ZIP. YourPet uses its saved copy of the imported package.
 
 If the loader reports a blank frame, check the referenced cell coordinates and the PNG alpha channel. If the pet jitters, check the cell registration across the clip. If the pet cannot look around, check the direction count, the clockwise order, and the gaze-radius setting.

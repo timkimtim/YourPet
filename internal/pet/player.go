@@ -6,6 +6,11 @@ import (
 	"time"
 )
 
+const (
+	attentionLinger = 260 * time.Millisecond
+	poseFade        = 96 * time.Millisecond
+)
+
 type Input struct {
 	Now                       time.Time
 	CursorX, CursorY          float64
@@ -17,8 +22,11 @@ type Input struct {
 }
 
 type Pose struct {
-	Cell Cell
-	Move float64
+	Cell      Cell
+	FadeFrom  Cell
+	FadeAlpha uint8
+	Move      float64
+	clip      *Animation
 }
 
 type Player struct {
@@ -26,21 +34,38 @@ type Player struct {
 	random                         *rand.Rand
 	idleIndex                      int
 	idleStart, idleUntil           time.Time
+	posture                        string
+	transition                     postureTransition
+	restHeld                       bool
 	nextWalk, walkStart, walkUntil time.Time
 	walkDirection                  int
 	lastTick                       time.Time
 	dragStart                      time.Time
 	action                         *Animation
 	actionStart                    time.Time
+	attentive                      bool
+	awaySince                      time.Time
 	tracking                       bool
 	angle                          float64
+	lastPose                       Pose
+	rendered                       bool
+	fadeStart                      time.Time
+	fadeFrom                       Cell
 }
 
 func NewPlayer(p *Package, now time.Time, seed int64) *Player {
-	player := &Player{Pet: p, random: rand.New(rand.NewSource(seed)), lastTick: now}
+	player := &Player{Pet: p, random: rand.New(rand.NewSource(seed)), lastTick: now, posture: p.Idle[0].Animation}
 	player.startIdle(0, now)
 	player.scheduleWalk(now)
 	return player
+}
+
+func clipPose(clip *Animation, elapsed time.Duration) Pose {
+	return Pose{Cell: clip.At(elapsed), clip: clip}
+}
+
+func (p *Player) idleID() string {
+	return p.Pet.Idle[p.idleIndex].Animation
 }
 
 func (p *Player) startIdle(index int, now time.Time) {
@@ -70,42 +95,92 @@ func (p *Player) scheduleWalk(now time.Time) {
 
 func (p *Player) Play(id string, now time.Time) {
 	if clip := p.Pet.Clips[id]; clip != nil {
-		p.action, p.actionStart = clip, now
+		p.action, p.actionStart = clip, time.Time{}
 		p.scheduleWalk(now)
 	}
 }
 
+func (p *Player) Jump(now time.Time) {
+	if p.Pet.Jump != "" && p.action != p.Pet.Clips[p.Pet.Jump] {
+		p.Play(p.Pet.Jump, now)
+	}
+}
+
 func (p *Player) Tick(input Input) Pose {
+	pose := p.tick(input)
+	if p.rendered && p.lastPose.clip != pose.clip {
+		p.fadeStart = time.Time{}
+		if p.lastPose.Cell != pose.Cell {
+			p.fadeStart, p.fadeFrom = input.Now, p.lastPose.Cell
+		}
+	}
+	if !p.fadeStart.IsZero() {
+		elapsed := input.Now.Sub(p.fadeStart)
+		if elapsed >= poseFade {
+			p.fadeStart = time.Time{}
+		} else {
+			ratio := float64(elapsed) / float64(poseFade)
+			pose.FadeFrom = p.fadeFrom
+			pose.FadeAlpha = uint8(math.Round(255 * (1 - ratio*ratio*(3-2*ratio))))
+		}
+	}
+	p.lastPose, p.rendered = pose, true
+	return pose
+}
+
+func (p *Player) tick(input Input) Pose {
 	now := input.Now
 	delta := math.Max(0, math.Min(0.08, now.Sub(p.lastTick).Seconds()))
 	p.lastTick = now
 	if input.Dragging {
 		p.tracking = false
+		p.restHeld = true
 		if p.dragStart.IsZero() {
 			p.dragStart = now
 			p.scheduleWalk(now)
 		}
 		if input.DragDirection != 0 && p.Pet.Walk != nil {
-			return Pose{Cell: p.walkClip(input.DragDirection).At(now.Sub(p.dragStart))}
+			p.posture, p.transition = p.neutral(), postureTransition{}
+			return clipPose(p.walkClip(input.DragDirection), now.Sub(p.dragStart))
+		}
+		if p.rendered {
+			return Pose{Cell: p.lastPose.Cell, clip: p.lastPose.clip}
 		}
 		return p.idlePose(now)
 	}
 	p.dragStart = time.Time{}
+
+	p.updateAttention(input)
 	if p.action != nil {
-		elapsed := now.Sub(p.actionStart)
-		if elapsed < p.action.Length {
-			p.tracking = false
-			return Pose{Cell: p.action.At(elapsed)}
+		p.restHeld, p.tracking = true, false
+		if p.actionStart.IsZero() {
+			if pose, moving := p.movePosture(p.neutral(), now); moving {
+				return pose
+			}
+			p.actionStart = now
+		}
+		if elapsed := now.Sub(p.actionStart); elapsed < p.action.Length {
+			return clipPose(p.action, elapsed)
 		}
 		p.action = nil
-		p.startIdle(p.idleIndex, now)
 	}
-	if gaze, ok := p.lookPose(input, delta); ok {
+	if p.attentive {
+		p.restHeld = true
 		if p.walkDirection != 0 {
 			p.scheduleWalk(now)
 		}
-		return gaze
+		if pose, moving := p.movePosture(p.neutral(), now); moving {
+			return pose
+		}
+		return p.lookPose(input, delta)
 	}
+	if p.restHeld {
+		p.restHeld = false
+		// Resume the same rest with a fresh interval, even after a long hover.
+		p.startIdle(p.idleIndex, now)
+		p.scheduleWalk(now)
+	}
+
 	if !input.AutoWalk && p.walkDirection != 0 {
 		p.scheduleWalk(now)
 	}
@@ -115,22 +190,32 @@ func (p *Player) Tick(input Input) Pose {
 			p.scheduleWalk(now)
 			p.startIdle(0, now)
 		}
-		if p.walkDirection == 0 && !now.Before(p.nextWalk) {
+		if p.walkDirection == 0 && !now.Before(p.nextWalk) && (input.CanWalkLeft || input.CanWalkRight) {
+			if pose, moving := p.movePosture(p.neutral(), now); moving {
+				return pose
+			}
 			p.beginWalk(input)
 		}
 		if p.walkDirection != 0 {
-			return Pose{Cell: p.walkClip(p.walkDirection).At(now.Sub(p.walkStart)), Move: float64(p.walkDirection) * 65 * delta}
+			pose := clipPose(p.walkClip(p.walkDirection), now.Sub(p.walkStart))
+			pose.Move = float64(p.walkDirection) * 65 * delta
+			return pose
 		}
+	}
+	if pose, moving := p.movePosture(p.idleID(), now); moving {
+		return pose
 	}
 	if !now.Before(p.idleUntil) {
 		p.changeIdle(now)
+		if pose, moving := p.movePosture(p.idleID(), now); moving {
+			return pose
+		}
 	}
 	return p.idlePose(now)
 }
 
 func (p *Player) idlePose(now time.Time) Pose {
-	clip := p.Pet.Clips[p.Pet.Idle[p.idleIndex].Animation]
-	return Pose{Cell: clip.At(now.Sub(p.idleStart))}
+	return clipPose(p.Pet.Clips[p.idleID()], now.Sub(p.idleStart))
 }
 
 func (p *Player) beginWalk(input Input) {
@@ -151,24 +236,39 @@ func (p *Player) walkClip(direction int) *Animation {
 	return p.Pet.Clips[p.Pet.Walk.Right]
 }
 
-func (p *Player) lookPose(input Input, delta float64) (Pose, bool) {
-	look := p.Pet.Look
+func (p *Player) updateAttention(input Input) {
 	radius := input.LookRadius
-	if p.tracking {
+	if p.attentive {
 		radius += 14
 	}
-	distance := math.Hypot(input.CursorX, input.CursorY)
-	if look == nil || input.LookRadius <= 0 || distance > radius {
-		if p.tracking {
-			p.tracking = false
-			p.startIdle(p.idleIndex, input.Now)
-			p.scheduleWalk(input.Now)
-		}
-		return Pose{}, false
+	switch {
+	case p.Pet.Look == nil || input.LookRadius <= 0:
+		p.attentive = false
+	case math.Hypot(input.CursorX, input.CursorY) <= radius:
+		p.attentive, p.awaySince = true, time.Time{}
+	case p.attentive && p.awaySince.IsZero():
+		p.awaySince = input.Now
+	case p.attentive && input.Now.Sub(p.awaySince) >= attentionLinger:
+		p.attentive = false
 	}
-	if distance < 10 {
+	if !p.attentive {
 		p.tracking = false
-		return Pose{Cell: p.Pet.Clips[look.Neutral].Frames[0].Cell}, true
+		p.awaySince = time.Time{}
+	}
+}
+
+func (p *Player) lookPose(input Input, delta float64) Pose {
+	look := p.Pet.Look
+	neutral := p.Pet.Clips[look.Neutral].Frames[0].Cell
+	if !p.awaySince.IsZero() {
+		if p.rendered && p.lastPose.clip == nil {
+			return Pose{Cell: p.lastPose.Cell}
+		}
+		return Pose{Cell: neutral}
+	}
+	if math.Hypot(input.CursorX, input.CursorY) < 10 {
+		p.tracking = false
+		return Pose{Cell: neutral}
 	}
 	target := math.Mod(math.Atan2(input.CursorX, -input.CursorY)*180/math.Pi+360, 360)
 	if !p.tracking {
@@ -183,5 +283,5 @@ func (p *Player) lookPose(input Input, delta float64) (Pose, bool) {
 	}
 	n := len(look.Directions)
 	index := int(math.Round(p.angle*float64(n)/360)) % n
-	return Pose{Cell: look.Directions[index]}, true
+	return Pose{Cell: look.Directions[index]}
 }

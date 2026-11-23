@@ -61,6 +61,8 @@ type app struct {
 	x, y                                                        float64
 	surface                                                     surface
 	lastCell                                                    pet.Cell
+	lastFadeFrom                                                pet.Cell
+	lastFadeAlpha                                               uint8
 	drawn                                                       bool
 	drawnAt                                                     point
 	hidden, dragDown, dragging, dialogOpen, menuOpen, trayAdded bool
@@ -217,20 +219,10 @@ func windowProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 		}
 		a.drawn = false
 		a.fullscreenCheckAt = time.Time{}
-	case wmLButtonDown:
+	case wmLButtonDown, wmLButtonDoubleClick:
 		a.beginDrag()
 	case wmLButtonUp:
-		captured := a.dragDown
-		a.endDrag()
-		if captured {
-			releaseCapture.Call()
-		}
-	case wmLButtonDoubleClick:
-		a.endDrag()
-		releaseCapture.Call()
-		if a.player != nil {
-			a.player.Play(a.player.Pet.Jump, time.Now())
-		}
+		a.finishLeftButton()
 	case wmMouseMove:
 		a.moveDrag()
 	case wmCaptureChanged, wmCancelMode:
@@ -436,6 +428,10 @@ func (a *app) beginDrag() {
 	setCapture.Call(a.window)
 }
 
+func dragThresholdReached(origin, pos point) bool {
+	return math.Hypot(float64(pos.X-origin.X), float64(pos.Y-origin.Y)) >= 4
+}
+
 func (a *app) moveDrag() {
 	if !a.dragDown {
 		return
@@ -444,7 +440,7 @@ func (a *app) moveDrag() {
 	if !ok {
 		return
 	}
-	if !a.dragging && math.Hypot(float64(pos.X-a.dragOrigin.X), float64(pos.Y-a.dragOrigin.Y)) < 4 {
+	if !a.dragging && !dragThresholdReached(a.dragOrigin, pos) {
 		return
 	}
 	a.dragging = true
@@ -461,6 +457,20 @@ func (a *app) moveDrag() {
 	}
 	a.dragLast = pos
 	a.tick()
+}
+
+func (a *app) finishLeftButton() {
+	if !a.dragDown {
+		return
+	}
+	pos, ok := cursorPosition()
+	click := !a.dragging && (!ok || !dragThresholdReached(a.dragOrigin, pos))
+	a.endDrag()
+	releaseCapture.Call()
+	if click && !a.hidden && a.player != nil {
+		a.player.Jump(time.Now())
+		a.tick()
+	}
 }
 
 func (a *app) endDrag() {
@@ -503,18 +513,18 @@ func (a *app) tick() {
 	}
 	pose := a.player.Tick(pet.Input{
 		Now: now, CursorX: dx, CursorY: dy, LookRadius: radius, AutoWalk: a.settings.AutoWalk,
-		Dragging: a.dragDown, DragDirection: direction,
+		Dragging: a.dragging, DragDirection: direction,
 		CanWalkLeft: a.x > float64(area.Left)+1, CanWalkRight: a.x+float64(w) < float64(area.Right)-1,
 	})
 	if pose.Move != 0 {
 		a.x += pose.Move * float64(a.settings.Scale) / 100
 		a.clamp(area, false)
 	}
-	a.showFrame(pose.Cell, w, h)
+	a.showPose(pose, w, h)
 }
 
-func (a *app) showFrame(cell pet.Cell, w, h int) {
-	if err := a.paint(cell, w, h); err != nil {
+func (a *app) showPose(pose pet.Pose, w, h int) {
+	if err := a.paint(pose, w, h); err != nil {
 		if !a.displayError {
 			a.displayError = true
 			a.error(tr("Could not display the pet", "Не удалось отобразить питомца"), err)
@@ -527,10 +537,11 @@ func (a *app) showFrame(cell pet.Cell, w, h int) {
 	}
 }
 
-func (a *app) paint(cell pet.Cell, width, height int) error {
+func (a *app) paint(pose pet.Pose, width, height int) error {
 	pos := point{int32(math.Round(a.x)), int32(math.Round(a.y))}
 	resized := a.surface.width != width || a.surface.height != height
-	changed := !a.drawn || resized || a.lastCell != cell
+	changed := !a.drawn || resized || a.lastCell != pose.Cell ||
+		a.lastFadeFrom != pose.FadeFrom || a.lastFadeAlpha != pose.FadeAlpha
 	if !changed && a.drawnAt == pos {
 		return nil
 	}
@@ -540,12 +551,14 @@ func (a *app) paint(cell pet.Cell, width, height int) error {
 		}
 	}
 	if changed {
-		a.surface.draw(a.player.Pet.AtlasImage, a.player.Pet.Rect(cell))
+		pkg := a.player.Pet
+		a.surface.draw(pkg.AtlasImage, pkg.Rect(pose.Cell), pkg.Rect(pose.FadeFrom), pose.FadeAlpha)
 	}
 	if err := a.surface.present(a.window, pos); err != nil {
 		return err
 	}
-	a.drawn, a.lastCell, a.drawnAt = true, cell, pos
+	a.drawn, a.lastCell, a.drawnAt = true, pose.Cell, pos
+	a.lastFadeFrom, a.lastFadeAlpha = pose.FadeFrom, pose.FadeAlpha
 	return nil
 }
 
