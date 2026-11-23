@@ -25,6 +25,12 @@ func TestBundledPackage(t *testing.T) {
 		len(pkg.Look.Directions) != 16 || pkg.Walk == nil || pkg.Jump == "" {
 		t.Fatal("built-in package has missing features")
 	}
+	for _, id := range []string{FullscreenHideID, FullscreenShowID} {
+		clip := pkg.Clips[id]
+		if clip == nil || len(clip.Frames) < 5 || clip.Length > time.Second {
+			t.Fatalf("missing or invalid built-in transition %q", id)
+		}
+	}
 }
 
 func TestAmbientSwitchAndWalk(t *testing.T) {

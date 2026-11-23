@@ -4,6 +4,8 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	"github.com/timkimtim/YourPet/internal/pet"
 )
 
 func TestNativeOverlay(t *testing.T) {
@@ -57,6 +59,27 @@ func TestNativeOverlay(t *testing.T) {
 	a.tick()
 	if !a.windowShown {
 		t.Fatal("overlay did not return after leaving fullscreen")
+	}
+
+	a.settings.AnimateFullscreen = true
+	a.fullscreen = true
+	a.tick()
+	if !a.windowShown || !a.portalActive || a.lastCell != pkg.Clips[pet.FullscreenHideID].Frames[0].Cell {
+		t.Fatal("fullscreen did not draw the portal departure")
+	}
+	style, _, _ = getWindowLong.Call(a.window, ^uintptr(19))
+	if style&wsExTransparent == 0 {
+		t.Fatal("portal animation is intercepting clicks")
+	}
+	a.exclusiveFullscreen = true
+	a.tick()
+	if a.windowShown || a.portalActive {
+		t.Fatal("exclusive fullscreen did not hide the overlay immediately")
+	}
+	a.fullscreen, a.exclusiveFullscreen = false, false
+	a.tick()
+	if !a.windowShown || !a.portalActive || a.lastCell != pkg.Clips[pet.FullscreenShowID].Frames[0].Cell {
+		t.Fatal("return did not draw the portal arrival")
 	}
 }
 

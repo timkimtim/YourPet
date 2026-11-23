@@ -2,7 +2,10 @@ package main
 
 import (
 	"syscall"
+	"time"
 	"unsafe"
+
+	"github.com/timkimtim/YourPet/internal/pet"
 )
 
 var (
@@ -13,7 +16,48 @@ var (
 	windowMinimized    = user32.NewProc("IsIconic")
 	windowMaximized    = user32.NewProc("IsZoomed")
 	dwmWindowAttribute = syscall.NewLazyDLL("dwmapi.dll").NewProc("DwmGetWindowAttribute")
+	notificationState  = shell32.NewProc("SHQueryUserNotificationState")
 )
+
+func (a *app) handleFullscreen(now time.Time, width, height int) bool {
+	if !now.Before(a.fullscreenCheckAt) {
+		center := point{int32(a.x) + int32(width/2), int32(a.y) + int32(height/2)}
+		a.fullscreen = a.settings.HideFullscreen && foregroundFillsMonitor(center, a.window)
+		a.exclusiveFullscreen = a.fullscreen && exclusiveGameActive()
+		a.fullscreenCheckAt = now.Add(160 * time.Millisecond)
+	}
+	var leave, arrive *pet.Animation
+	if a.settings.AnimateFullscreen {
+		leave = a.player.Pet.Clips[pet.FullscreenHideID]
+		arrive = a.player.Pet.Clips[pet.FullscreenShowID]
+	}
+	canLeave := a.windowShown && a.settings.Topmost && !a.exclusiveFullscreen && !a.dragDown
+	display := a.fullscreenMotion.Step(now, a.fullscreen, canLeave, leave, arrive)
+	a.setPortalActive(display.Animating)
+	if display.Hidden {
+		a.hideOverlay()
+		return true
+	}
+	if display.Animating {
+		a.showFrame(display.Cell, width, height)
+		return true
+	}
+	return false
+}
+
+func (a *app) setPortalActive(active bool) {
+	if a.portalActive != active {
+		a.portalActive = active
+		a.refreshStyle()
+	}
+}
+
+func exclusiveGameActive() bool {
+	const runningExclusiveD3D = 3 // QUNS_RUNNING_D3D_FULL_SCREEN
+	var state int32
+	result, _, _ := notificationState.Call(uintptr(unsafe.Pointer(&state)))
+	return result == 0 && state == runningExclusiveD3D
+}
 
 func foregroundFillsMonitor(at point, ownWindow uintptr) bool {
 	foreground, _, _ := foregroundWindow.Call()

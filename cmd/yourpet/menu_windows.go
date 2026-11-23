@@ -6,6 +6,7 @@ import (
 	"unsafe"
 
 	yourpet "github.com/timkimtim/YourPet"
+	"github.com/timkimtim/YourPet/internal/pet"
 )
 
 const (
@@ -56,27 +57,27 @@ func (a *app) openMenu() {
 		return
 	}
 	defer destroyMenu.Call(menu)
-	pet := a.player.Pet
-	menuItem(menu, 0, pet.Name, false, false)
+	pkg := a.player.Pet
+	menuItem(menu, 0, pkg.Name, false, false)
 	appendMenu.Call(menu, menuSeparator, 0, 0)
 	menuItem(menu, commandLoad, tr("Load pet…", "Загрузить питомца…"), false, true)
 	if a.imported {
 		menuItem(menu, commandDefault, tr("Restore default pet", "Вернуть питомца по умолчанию"), false, true)
 	}
-	menuItem(menu, commandNextIdle, tr("Change idle pose", "Сменить позу"), false, len(pet.Idle) > 1)
+	menuItem(menu, commandNextIdle, tr("Change idle pose", "Сменить позу"), false, len(pkg.Idle) > 1)
 	if list := submenu(menu, tr("Animations", "Анимации"), true); list != 0 {
-		for index, clip := range pet.Animations {
+		for index, clip := range pkg.Animations {
 			menuItem(list, commandAnimation+index, clip.Label, false, true)
 		}
 	}
 	appendMenu.Call(menu, menuSeparator, 0, 0)
-	menuItem(menu, commandAutoWalk, tr("Auto-walk", "Автопрогулки"), a.settings.AutoWalk && pet.Walk != nil, pet.Walk != nil)
+	menuItem(menu, commandAutoWalk, tr("Auto-walk", "Автопрогулки"), a.settings.AutoWalk && pkg.Walk != nil, pkg.Walk != nil)
 	if list := submenu(menu, tr("Size", "Размер"), true); list != 0 {
 		for index, size := range sizes {
 			menuItem(list, commandSize+index, fmt.Sprintf("%d%%", size), a.settings.Scale == size, true)
 		}
 	}
-	if list := submenu(menu, tr("Gaze radius", "Радиус взгляда"), pet.Look != nil); list != 0 {
+	if list := submenu(menu, tr("Gaze radius", "Радиус взгляда"), pkg.Look != nil); list != 0 {
 		for index, radius := range radii {
 			label := fmt.Sprintf(tr("%d pixels", "%d пикселей"), radius)
 			if radius == 0 {
@@ -87,6 +88,9 @@ func (a *app) openMenu() {
 	}
 	menuItem(menu, commandTopmost, tr("Always on top", "Поверх окон"), a.settings.Topmost, true)
 	menuItem(menu, commandHideFullscreen, tr("Hide in fullscreen", "Скрывать в полноэкранном режиме"), a.settings.HideFullscreen, true)
+	hasPortal := pkg.Clips[pet.FullscreenHideID] != nil || pkg.Clips[pet.FullscreenShowID] != nil
+	menuItem(menu, commandAnimateFullscreen, tr("Animate fullscreen transitions", "Анимация перехода в полноэкранный режим"),
+		a.settings.AnimateFullscreen && hasPortal, a.settings.HideFullscreen && hasPortal)
 	menuItem(menu, commandClickThrough, tr("Click-through", "Пропускать клики"), a.settings.ClickThrough, a.trayAdded)
 	menuItem(menu, commandStartup, tr("Start with Windows", "Запускать при входе в Windows"), launchesAtLogin(), true)
 	appendMenu.Call(menu, menuSeparator, 0, 0)
@@ -146,6 +150,9 @@ func (a *app) perform(command int) {
 		case commandHideFullscreen:
 			a.settings.HideFullscreen = !a.settings.HideFullscreen
 			a.fullscreenCheckAt = time.Time{}
+			a.saveSettings()
+		case commandAnimateFullscreen:
+			a.settings.AnimateFullscreen = !a.settings.AnimateFullscreen
 			a.saveSettings()
 		case commandClickThrough:
 			a.settings.ClickThrough = !a.settings.ClickThrough

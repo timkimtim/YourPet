@@ -23,6 +23,7 @@ const (
 	commandAutoWalk
 	commandTopmost
 	commandHideFullscreen
+	commandAnimateFullscreen
 	commandClickThrough
 	commandStartup
 	commandVisibility
@@ -39,14 +40,15 @@ var radii = []int{0, 150, 260, 420}
 var instance *app
 
 type settings struct {
-	Scale          int
-	Radius         int
-	Topmost        bool
-	HideFullscreen bool
-	ClickThrough   bool
-	AutoWalk       bool
-	Placed         bool
-	X, Y           int32
+	Scale             int
+	Radius            int
+	Topmost           bool
+	HideFullscreen    bool
+	AnimateFullscreen bool
+	ClickThrough      bool
+	AutoWalk          bool
+	Placed            bool
+	X, Y              int32
 }
 
 type app struct {
@@ -63,7 +65,9 @@ type app struct {
 	drawnAt                                                     point
 	hidden, dragDown, dragging, dialogOpen, menuOpen, trayAdded bool
 	windowShown, fullscreen                                     bool
+	exclusiveFullscreen, portalActive                           bool
 	fullscreenCheckAt                                           time.Time
+	fullscreenMotion                                            pet.FullscreenMotion
 	dragOrigin, dragOffset, dragLast                            point
 	dragDirection                                               int
 	dragMovedAt                                                 time.Time
@@ -104,7 +108,7 @@ func run() error {
 	}
 	a := &app{
 		configDir: filepath.Join(folder, "YourPet"), executable: executable, hidden: true,
-		settings: settings{Scale: 100, Radius: 260, Topmost: true, HideFullscreen: true, AutoWalk: true},
+		settings: settings{Scale: 100, Radius: 260, Topmost: true, HideFullscreen: true, AnimateFullscreen: true, AutoWalk: true},
 	}
 	instance = a
 	a.loadSettings()
@@ -351,6 +355,8 @@ func (a *app) setPet(pkg *pet.Package) {
 	initial := a.player == nil
 	now := time.Now()
 	a.player = pet.NewPlayer(pkg, now, now.UnixNano())
+	a.fullscreenMotion = pet.FullscreenMotion{}
+	a.setPortalActive(false)
 	if initial {
 		if a.settings.Placed {
 			a.x, a.y = float64(a.settings.X), float64(a.settings.Y)
@@ -470,13 +476,7 @@ func (a *app) tick() {
 	}
 	now := time.Now()
 	w, h := a.size()
-	if !now.Before(a.fullscreenCheckAt) {
-		center := point{int32(a.x) + int32(w/2), int32(a.y) + int32(h/2)}
-		a.fullscreen = a.settings.HideFullscreen && foregroundFillsMonitor(center, a.window)
-		a.fullscreenCheckAt = now.Add(160 * time.Millisecond)
-	}
-	if a.fullscreen {
-		a.hideOverlay()
+	if a.handleFullscreen(now, w, h) {
 		return
 	}
 	dx, dy := math.Inf(1), math.Inf(1)
@@ -504,7 +504,11 @@ func (a *app) tick() {
 		a.x += pose.Move * float64(a.settings.Scale) / 100
 		a.clamp(area, false)
 	}
-	if err := a.paint(pose.Cell, w, h); err != nil {
+	a.showFrame(pose.Cell, w, h)
+}
+
+func (a *app) showFrame(cell pet.Cell, w, h int) {
+	if err := a.paint(cell, w, h); err != nil {
 		if !a.displayError {
 			a.displayError = true
 			a.error(tr("Could not display the pet", "Не удалось отобразить питомца"), err)
@@ -546,6 +550,8 @@ func (a *app) setVisible(visible bool) {
 		a.tick()
 	} else if a.trayAdded {
 		a.hidden = true
+		a.fullscreenMotion = pet.FullscreenMotion{}
+		a.setPortalActive(false)
 		a.hideOverlay()
 	}
 }
@@ -554,12 +560,16 @@ func (a *app) hideOverlay() {
 	if a.windowShown {
 		a.windowShown = false
 		showWindow.Call(a.window, 0)
+		if a.dragDown {
+			a.endDrag()
+			releaseCapture.Call()
+		}
 	}
 }
 
 func (a *app) refreshStyle() {
 	exStyle, _, _ := getWindowLong.Call(a.window, ^uintptr(19)) // GWL_EXSTYLE
-	if a.settings.ClickThrough {
+	if a.settings.ClickThrough || a.portalActive {
 		exStyle |= wsExTransparent
 	} else {
 		exStyle &^= wsExTransparent

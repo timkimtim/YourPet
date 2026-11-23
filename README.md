@@ -18,6 +18,7 @@ YourPet runs without an installer, an account, or administrator permissions. Rel
 - **Gaze radius** sets how close the cursor needs to be before the pet turns its head. Move the cursor around the pet to see the direction frames.
 - **Size** scales the artwork. **Always on top** controls whether the pet stays above ordinary windows.
 - **Hide in fullscreen** is enabled by default. The pet hides when the active video, game, or other fullscreen window fills its monitor. It returns when you leave fullscreen or switch to another window. An ordinary maximized window leaves it visible.
+- **Animate fullscreen transitions** is enabled by default for pets with transition clips. With **Always on top** enabled, Persik turns his back and jumps into a portal behind him. When fullscreen ends, he jumps out toward you. If Windows reports an exclusive fullscreen Direct3D game, YourPet hides immediately and plays the return once you're back. Turn off this setting for an immediate hide and return.
 - **Click-through** sends mouse clicks to the window underneath. Use the tray icon to turn the mode off when you want to drag or double-click the pet.
 - **Start with Windows** launches YourPet when you sign in. Enable it after moving the executable to its permanent folder.
 - Use **Hide pet**, **Show pet**, **Move to screen corner**, or **Exit** from the tray menu.
@@ -32,6 +33,8 @@ The app saves preferences and a copy of the imported package in `%APPDATA%\YourP
 4. Choose **Restore default pet** to go back to Persik.
 
 Try the editable [Persik example package](https://github.com/timkimtim/YourPet/releases/latest/download/Persik.pet). Open it as a ZIP to see how its animation manifest maps to the sprite sheet.
+
+If you imported an older Persik package separately, use **Restore default pet** or import the current example package to get the portal animations.
 
 ## Create a pet package
 
@@ -118,6 +121,8 @@ For example, once your sheet has four direction poses in row 2 and you have defi
 ```
 
 The four directions above are up, right, down, and left. An eight-direction sequence adds diagonals between them. A sixteen-direction sequence uses 22.5° steps. Cursor movement advances through the authored poses, and the named neutral idle supplies the face when the cursor is directly over the gaze origin.
+
+For fullscreen transitions, add clips with the reserved IDs `fullscreen-hide` and `fullscreen-show` to `animations`. Each clip plays once with a one-second limit. Use transparent cells and keep the last return frame aligned with the idle pose. A pet can supply either clip or both. When a clip is absent, the corresponding hide or return happens immediately.
 
 ### 3. ZIP, load, and test
 
