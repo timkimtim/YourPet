@@ -17,6 +17,7 @@ YourPet runs without an installer, an account, or administrator permissions. Rel
 - **Auto-walk** lets the pet stroll around the current monitor during quiet moments.
 - **Gaze radius** sets how close the cursor needs to be before the pet turns its head. Move the cursor around the pet to see the direction frames.
 - **Size** scales the artwork. **Always on top** controls whether the pet stays above ordinary windows.
+- **Hide in fullscreen** is enabled by default. The pet hides when the active video, game, or other fullscreen window fills its monitor. It returns when you leave fullscreen or switch to another window. An ordinary maximized window leaves it visible.
 - **Click-through** sends mouse clicks to the window underneath. Use the tray icon to turn the mode off when you want to drag or double-click the pet.
 - **Start with Windows** launches YourPet when you sign in. Enable it after moving the executable to its permanent folder.
 - Use **Hide pet**, **Show pet**, **Move to screen corner**, or **Exit** from the tray menu.

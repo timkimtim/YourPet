@@ -3,6 +3,7 @@ package main
 import (
 	"runtime"
 	"testing"
+	"time"
 )
 
 func TestNativeOverlay(t *testing.T) {
@@ -40,5 +41,37 @@ func TestNativeOverlay(t *testing.T) {
 	}
 	if a.lastCell != cell {
 		t.Fatal("unexpected frame was displayed")
+	}
+	a.hidden = false
+	a.fullscreenCheckAt = time.Now().Add(time.Minute)
+	a.tick()
+	if !a.windowShown {
+		t.Fatal("overlay did not appear")
+	}
+	a.fullscreen = true
+	a.tick()
+	if a.windowShown {
+		t.Fatal("fullscreen did not hide the overlay")
+	}
+	a.fullscreen = false
+	a.tick()
+	if !a.windowShown {
+		t.Fatal("overlay did not return after leaving fullscreen")
+	}
+}
+
+func TestFullscreenGeometry(t *testing.T) {
+	monitor := rectangle{Left: -1920, Top: 0, Right: 0, Bottom: 1080}
+	if !occupiesMonitor(monitor, monitor, false) {
+		t.Fatal("borderless video should count as fullscreen")
+	}
+	if occupiesMonitor(monitor, monitor, true) {
+		t.Fatal("captioned maximized window should remain visible even with an auto-hidden taskbar")
+	}
+	if occupiesMonitor(rectangle{-1920, 0, 0, 1032}, monitor, false) {
+		t.Fatal("window that leaves a taskbar gap should not count as fullscreen")
+	}
+	if occupiesMonitor(rectangle{0, 0, 1920, 1080}, monitor, false) {
+		t.Fatal("fullscreen on another monitor should not hide this pet")
 	}
 }

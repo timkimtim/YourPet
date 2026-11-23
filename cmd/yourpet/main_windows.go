@@ -22,6 +22,7 @@ const (
 	commandNextIdle
 	commandAutoWalk
 	commandTopmost
+	commandHideFullscreen
 	commandClickThrough
 	commandStartup
 	commandVisibility
@@ -37,13 +38,14 @@ var radii = []int{0, 150, 260, 420}
 var instance *app
 
 type settings struct {
-	Scale        int
-	Radius       int
-	Topmost      bool
-	ClickThrough bool
-	AutoWalk     bool
-	Placed       bool
-	X, Y         int32
+	Scale          int
+	Radius         int
+	Topmost        bool
+	HideFullscreen bool
+	ClickThrough   bool
+	AutoWalk       bool
+	Placed         bool
+	X, Y           int32
 }
 
 type app struct {
@@ -59,6 +61,8 @@ type app struct {
 	drawn                                                       bool
 	drawnAt                                                     point
 	hidden, dragDown, dragging, dialogOpen, menuOpen, trayAdded bool
+	windowShown, fullscreen                                     bool
+	fullscreenCheckAt                                           time.Time
 	dragOrigin, dragOffset, dragLast                            point
 	dragDirection                                               int
 	dragMovedAt                                                 time.Time
@@ -99,7 +103,7 @@ func run() error {
 	}
 	a := &app{
 		configDir: filepath.Join(folder, "YourPet"), executable: executable, hidden: true,
-		settings: settings{Scale: 100, Radius: 260, Topmost: true, AutoWalk: true},
+		settings: settings{Scale: 100, Radius: 260, Topmost: true, HideFullscreen: true, AutoWalk: true},
 	}
 	instance = a
 	a.loadSettings()
@@ -204,6 +208,7 @@ func windowProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	case wmDisplayChange, wmDPICHanged:
 		a.clamp(a.monitor(), false)
 		a.drawn = false
+		a.fullscreenCheckAt = time.Time{}
 	case wmLButtonDown:
 		a.beginDrag()
 	case wmLButtonUp:
@@ -464,6 +469,15 @@ func (a *app) tick() {
 	}
 	now := time.Now()
 	w, h := a.size()
+	if !now.Before(a.fullscreenCheckAt) {
+		center := point{int32(a.x) + int32(w/2), int32(a.y) + int32(h/2)}
+		a.fullscreen = a.settings.HideFullscreen && foregroundFillsMonitor(center, a.window)
+		a.fullscreenCheckAt = now.Add(160 * time.Millisecond)
+	}
+	if a.fullscreen {
+		a.hideOverlay()
+		return
+	}
 	dx, dy := math.Inf(1), math.Inf(1)
 	radius := float64(a.settings.Radius)
 	if look := a.player.Pet.Look; look != nil {
@@ -489,9 +503,16 @@ func (a *app) tick() {
 		a.x += pose.Move * float64(a.settings.Scale) / 100
 		a.clamp(area, false)
 	}
-	if err := a.paint(pose.Cell, w, h); err != nil && !a.displayError {
-		a.displayError = true
-		a.error(tr("Could not display the pet", "Не удалось отобразить питомца"), err)
+	if err := a.paint(pose.Cell, w, h); err != nil {
+		if !a.displayError {
+			a.displayError = true
+			a.error(tr("Could not display the pet", "Не удалось отобразить питомца"), err)
+		}
+		return
+	}
+	if !a.windowShown {
+		a.windowShown = true
+		showWindow.Call(a.window, 4) // SW_SHOWNOACTIVATE
 	}
 }
 
@@ -520,10 +541,17 @@ func (a *app) paint(cell pet.Cell, width, height int) error {
 func (a *app) setVisible(visible bool) {
 	if visible {
 		a.hidden = false
+		a.fullscreenCheckAt = time.Time{}
 		a.tick()
-		showWindow.Call(a.window, 4) // SW_SHOWNOACTIVATE
 	} else if a.trayAdded {
 		a.hidden = true
+		a.hideOverlay()
+	}
+}
+
+func (a *app) hideOverlay() {
+	if a.windowShown {
+		a.windowShown = false
 		showWindow.Call(a.window, 0)
 	}
 }

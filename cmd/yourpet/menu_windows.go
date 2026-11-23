@@ -84,6 +84,7 @@ func (a *app) openMenu() {
 		}
 	}
 	menuItem(menu, commandTopmost, tr("Always on top", "Поверх окон"), a.settings.Topmost, true)
+	menuItem(menu, commandHideFullscreen, tr("Hide in fullscreen", "Скрывать в полноэкранном режиме"), a.settings.HideFullscreen, true)
 	menuItem(menu, commandClickThrough, tr("Click-through", "Пропускать клики"), a.settings.ClickThrough, a.trayAdded)
 	menuItem(menu, commandStartup, tr("Start with Windows", "Запускать при входе в Windows"), launchesAtLogin(), true)
 	appendMenu.Call(menu, menuSeparator, 0, 0)
@@ -138,6 +139,10 @@ func (a *app) perform(command int) {
 		case commandTopmost:
 			a.settings.Topmost = !a.settings.Topmost
 			a.refreshStyle()
+			a.saveSettings()
+		case commandHideFullscreen:
+			a.settings.HideFullscreen = !a.settings.HideFullscreen
+			a.fullscreenCheckAt = time.Time{}
 			a.saveSettings()
 		case commandClickThrough:
 			a.settings.ClickThrough = !a.settings.ClickThrough
