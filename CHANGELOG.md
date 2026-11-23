@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- Track fullscreen windows on the pet's own monitor, including when focus moves to another screen.
+- Check the destination monitor after the pet is dragged between displays.
+
 ## 0.2.1
 
 - Match Persik's cloudy left eye to the original drawing across the animation frames and app icon.

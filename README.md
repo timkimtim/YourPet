@@ -19,7 +19,7 @@ YourPet runs without an installer, an account, or administrator permissions. Rel
 - **Auto-walk** lets the pet stroll around the current monitor during quiet moments.
 - **Gaze radius** sets how close the cursor needs to be before the pet turns its head. Move the cursor around the pet to see the direction frames.
 - **Size** scales the artwork. **Always on top** controls whether the pet stays above ordinary windows.
-- **Hide in fullscreen** is enabled by default. The pet hides when the active video, game, or other fullscreen window fills its monitor. It returns when you leave fullscreen or switch to another window. An ordinary maximized window leaves it visible.
+- **Hide in fullscreen** is enabled by default. The pet hides while a fullscreen window is in front on the pet's monitor. Working on a different screen keeps the pet hidden if the fullscreen window is still showing on its own screen. You can drag the pet to another monitor, where it follows that screen's windows. An ordinary maximized window leaves it visible.
 - **Animate fullscreen transitions** is enabled by default for pets with transition clips. With **Always on top** enabled, Persik turns his back and jumps into a portal behind him. When fullscreen ends, he jumps out toward you. If Windows reports an exclusive fullscreen Direct3D game, YourPet hides immediately and plays the return once you're back. Turn off this setting for an immediate hide and return.
 - **Click-through** sends mouse clicks to the window underneath. Use the tray icon to turn the mode off when you want to drag or double-click the pet.
 - **Start with Windows** launches YourPet when you sign in. Enable it after moving the executable to its permanent folder.

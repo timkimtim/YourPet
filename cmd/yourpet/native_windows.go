@@ -178,12 +178,16 @@ func cursorPosition() (point, bool) {
 }
 
 func workArea(at point) rectangle {
-	return displayInfo(at).Work
+	return displayInfo(monitorAt(at)).Work
 }
 
-func displayInfo(at point) monitorInfo {
+func monitorAt(at point) uintptr {
 	packed := uintptr(uint64(uint32(at.X)) | uint64(uint32(at.Y))<<32)
 	monitor, _, _ := getMonitor.Call(packed, 2) // MONITOR_DEFAULTTONEAREST
+	return monitor
+}
+
+func displayInfo(monitor uintptr) monitorInfo {
 	info := monitorInfo{Size: uint32(unsafe.Sizeof(monitorInfo{}))}
 	if ok, _, _ := getMonitorInfo.Call(monitor, uintptr(unsafe.Pointer(&info))); ok == 0 {
 		info.Work = rectangle{Right: 1024, Bottom: 768}

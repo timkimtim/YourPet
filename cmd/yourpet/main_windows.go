@@ -68,6 +68,7 @@ type app struct {
 	exclusiveFullscreen, portalActive                           bool
 	fullscreenCheckAt                                           time.Time
 	fullscreenMotion                                            pet.FullscreenMotion
+	fullscreenScan                                              fullscreenScan
 	dragOrigin, dragOffset, dragLast                            point
 	dragDirection                                               int
 	dragMovedAt                                                 time.Time
@@ -211,7 +212,9 @@ func windowProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 	case wmShowPet:
 		a.setVisible(true)
 	case wmDisplayChange, wmDPICHanged:
-		a.clamp(a.monitor(), false)
+		if !a.dragDown {
+			a.clamp(a.monitor(), false)
+		}
 		a.drawn = false
 		a.fullscreenCheckAt = time.Time{}
 	case wmLButtonDown:
@@ -461,6 +464,9 @@ func (a *app) moveDrag() {
 }
 
 func (a *app) endDrag() {
+	if a.dragDown {
+		a.fullscreenCheckAt = time.Time{}
+	}
 	dragged := a.dragging
 	a.dragDown, a.dragging = false, false
 	a.dragDirection = 0
