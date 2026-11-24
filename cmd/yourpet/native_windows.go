@@ -147,6 +147,7 @@ const (
 	wmCancelMode         = 0x001f
 	wmTray               = 0x8001
 	wmShowPet            = 0x8002
+	ninBalloonUserClick  = 0x0405
 	wsExLayered          = 0x00080000
 	wsExToolWindow       = 0x00000080
 	wsExTransparent      = 0x00000020

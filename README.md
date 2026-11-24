@@ -12,6 +12,14 @@ YourPet is a small, animated desktop companion for Windows 11. It runs locally a
 
 YourPet runs without an installer, an account, or administrator permissions. Release binaries are unsigned. Windows may show a publisher prompt for the downloaded executable.
 
+## Update YourPet
+
+Starting with v0.3.0, YourPet checks for new stable releases in the background and shows an update notification when one is available. You can also right-click the tray icon and choose **Check for updates…** at any time.
+
+Choose **Install update…** and confirm. YourPet downloads the matching x64 or ARM64 archive from GitHub Releases, checks its SHA-256, replaces the executable, and restarts. Your settings, imported pet, and existing autostart path carry over. Keep the executable in a folder your Windows account can write to.
+
+If you have an earlier version, quit YourPet through the tray menu and replace `YourPet.exe` in its existing folder once. Use the links above to download v0.3.0 or later.
+
 ## Controls
 
 - **Left-click** the pet to jump. **Drag** with the left mouse button to change its position.
@@ -161,6 +169,4 @@ The app uses semantic versions. The current version is in [VERSION](VERSION), in
 
 For a release, update `VERSION` and [CHANGELOG.md](CHANGELOG.md), commit the changes, and push a matching `v` tag to GitHub. For example, use `v0.2.0` when `VERSION` contains `0.2.0`. GitHub Actions verifies the tag, runs the Windows tests, and publishes ZIPs for x64 and ARM64 with SHA-256 checksums. Use a patch version for a compatible fix, a minor version for a compatible feature, or a major version for a breaking change.
 
-The two Windows ZIPs keep the same filenames across releases so the download links always point to the current build.
-
-To upgrade a portable installation, quit YourPet and replace `YourPet.exe` in the existing folder. Your imported package and preferences are stored in your Windows profile.
+The two Windows ZIPs keep the same filenames across releases for the download links and the in-app updater.

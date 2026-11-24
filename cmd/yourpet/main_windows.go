@@ -29,6 +29,7 @@ const (
 	commandVisibility
 	commandReposition
 	commandAbout
+	commandUpdate
 	commandQuit
 	commandSize      = 30
 	commandRadius    = 40
@@ -75,12 +76,19 @@ type app struct {
 	dragDirection                                               int
 	dragMovedAt                                                 time.Time
 	displayError                                                bool
+	updates                                                     updateState
 }
 
 func main() {
 	runtime.LockOSThread()
 	lang, _, _ := getUILanguage.Call()
 	russianUI = lang&0x03ff == 0x19
+	if len(os.Args) == 4 && os.Args[1] == applyUpdateArg {
+		if err := runUpdateHelper(os.Args[2], os.Args[3]); err != nil {
+			showMessage(0, tr("Could not install the update", "Не удалось установить обновление")+"\n\n"+err.Error(), 0x10)
+		}
+		return
+	}
 	context := ^uintptr(3) // DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 	setDPIContext.Call(context)
 	name := utf16("Local\\YourPet.Instance")
@@ -141,6 +149,12 @@ func run() error {
 		return fmt.Errorf("не удалось запустить анимацию: %w", err)
 	}
 	defer killTimer.Call(a.window, 1)
+	a.updates.nextCheck = time.Now().Add(15 * time.Second)
+	if issue := completeUpdateStartup(executable, os.Args[1:]); issue != "" {
+		a.updates.nextCheck = time.Now().Add(updateCheckInterval)
+		a.updateMessage(tr("The update failed. YourPet restarted the previous version.",
+			"Обновление не установилось. YourPet запустил предыдущую версию.")+"\n\n"+issue, 0x30)
+	}
 	if customErr != nil && !errors.Is(customErr, os.ErrNotExist) {
 		showMessage(a.window, "Сохранённый питомец не загрузился. Запущен питомец по умолчанию.\n\n"+customErr.Error(), 0x30)
 	}
@@ -211,6 +225,7 @@ func windowProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 		destroyWindow.Call(hwnd)
 	case wmTimer:
 		a.tick()
+		a.pollUpdates()
 	case wmShowPet:
 		a.setVisible(true)
 	case wmDisplayChange, wmDPICHanged:
@@ -235,6 +250,10 @@ func windowProc(hwnd uintptr, message uint32, wParam, lParam uintptr) uintptr {
 			a.openMenu()
 		case wmLButtonUp, wmLButtonDoubleClick:
 			a.setVisible(true)
+		case ninBalloonUserClick:
+			if a.updates.available != nil {
+				a.offerUpdate()
+			}
 		}
 	default:
 		result, _, _ := defaultWindowProc.Call(hwnd, uintptr(message), wParam, lParam)

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+- Check GitHub Releases for updates in the background or from the YourPet menu.
+- Download and install the matching Windows build after confirmation. YourPet verifies the archive, restarts in place, and restores its previous executable if the new version fails to start.
+
 ## 0.2.3
 
 - Give Persik animated posture changes between sleeping, sitting, and standing. Approaching with the cursor wakes him and leaving lets him settle into his previous rest.
