@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1
+
+- Uninstall from the YourPet tray menu. YourPet removes its autostart entry and lets you choose whether to keep the saved settings and imported pet.
+
 ## 0.3.0
 
 - Check GitHub Releases for updates in the background or from the YourPet menu.

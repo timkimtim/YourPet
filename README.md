@@ -33,7 +33,13 @@ If you have an earlier version, quit YourPet through the tray menu and replace `
 - **Start with Windows** launches YourPet when you sign in. Enable it after moving the executable to its permanent folder.
 - Use **Hide pet**, **Show pet**, **Move to screen corner**, or **Exit** from the tray menu.
 
-The app saves preferences and a copy of the imported package in `%APPDATA%\YourPet`. To remove the app, turn off **Start with Windows**, choose **Exit**, and delete the extracted folder. You can also delete `%APPDATA%\YourPet` to remove the saved pet and preferences.
+## Uninstall YourPet
+
+1. Right-click the YourPet icon next to the Windows clock and select **Uninstall YourPet…**.
+2. To remove your preferences and imported pet too, check **Also delete saved settings and the imported pet**. Leave it unchecked to keep them for a reinstall.
+3. Click **Uninstall**. YourPet closes, removes its Windows autostart entry, and deletes its executable. You can delete the extracted ZIP and any remaining files in its folder yourself.
+
+In earlier versions, turn off **Start with Windows**, choose **Exit**, and delete the executable. Preferences and the imported pet are saved in `%APPDATA%\YourPet`.
 
 ## Load a pet
 

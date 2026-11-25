@@ -17,6 +17,8 @@ const testStartUpdateArg = "--test-start-update"
 func TestMain(m *testing.M) {
 	var err error
 	switch {
+	case len(os.Args) == 4 && os.Args[1] == testUninstallArg:
+		err = runUninstallTestProcess(os.Args[2], os.Args[3])
 	case len(os.Args) == 3 && os.Args[1] == testStartUpdateArg:
 		var data []byte
 		if data, err = os.ReadFile(os.Args[2]); err == nil {
